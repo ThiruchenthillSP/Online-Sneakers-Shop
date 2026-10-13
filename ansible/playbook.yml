@@ -1,0 +1,75 @@
+---
+- name: Reconcile the Online Sneakers Shop on Docker Desktop
+  hosts: local
+  gather_facts: false
+  vars:
+    project_dir: "{{ playbook_dir }}/.."
+    shop_image: online-sneakers-shop-shop:latest
+    force_build: false
+  tasks:
+    - name: Check project deployment files
+      ansible.builtin.stat:
+        path: "{{ project_dir }}/{{ item }}"
+      loop:
+        - Dockerfile
+        - docker-compose.yml
+        - .env
+      register: deployment_files
+
+    - name: Require project deployment files
+      ansible.builtin.assert:
+        that:
+          - deployment_files.results | selectattr('stat.exists', 'equalto', false) | list | length == 0
+        fail_msg: Create a private .env from .env.example and set ADMIN_PASSWORD before deploying.
+
+    - name: Validate Docker Compose configuration
+      ansible.builtin.command: docker compose config --quiet
+      args:
+        chdir: "{{ project_dir }}"
+      changed_when: false
+      no_log: true
+
+    - name: Check for the built shop image
+      ansible.builtin.command: "docker image inspect {{ shop_image }}"
+      register: image_check
+      failed_when: false
+      changed_when: false
+
+    - name: Build the image if absent or explicitly requested
+      ansible.builtin.command: docker compose build
+      args:
+        chdir: "{{ project_dir }}"
+      when: image_check.rc != 0 or force_build | bool
+
+    - name: Ensure the shop container is running and healthy
+      ansible.builtin.command: docker compose up -d --wait
+      args:
+        chdir: "{{ project_dir }}"
+      register: compose_up
+      changed_when: >-
+        'Created' in compose_up.stderr or
+        'Started' in compose_up.stderr or
+        'Recreated' in compose_up.stderr or
+        'Recreating' in compose_up.stderr
+
+    - name: Verify the HTTP health endpoint
+      ansible.builtin.uri:
+        url: http://127.0.0.1:8091/api/health
+        return_content: true
+        status_code: 200
+      register: health
+      retries: 10
+      delay: 3
+      until: health.json.status | default('') == 'ok'
+      changed_when: false
+
+    - name: Show final Compose service state
+      ansible.builtin.command: docker compose ps
+      args:
+        chdir: "{{ project_dir }}"
+      register: services
+      changed_when: false
+
+    - name: Print service summary
+      ansible.builtin.debug:
+        msg: "{{ services.stdout_lines }}"
