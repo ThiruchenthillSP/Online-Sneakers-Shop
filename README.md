@@ -14,14 +14,14 @@ This project lives in its own folder inside `Flight_Management` and uses an inde
 
 ## Start after restarting the laptop
 
-1. Open Docker Desktop and wait for the engine to start, if you want the containerized version.
+1. Open Docker Desktop and wait for the engine to start.
 2. Open PowerShell in `C:\Users\thira\Flight_Management\Online-Sneakers-Shop`.
-3. Copy `.env.example` to `.env` and set a strong `ADMIN_PASSWORD` before the first Docker start.
-4. Run `docker compose up -d --build`.
-5. Open <http://localhost:8091>. Check `docker compose ps` if needed.
-6. When finished, run `docker compose down`. The `shop-data` volume retains your data.
+3. The private `.env` already exists on this laptop. On a fresh clone, copy `.env.example` to `.env` and replace the example password.
+4. Run `.\scripts\start-shop.ps1` and then `.\scripts\status-shop.ps1`.
+5. Open <http://localhost:8091>. The shop service should be healthy.
+6. When finished, run `.\scripts\stop-shop.ps1`. The `shop-data` volume retains data.
 
-For a direct local start without Docker, set `ADMIN_EMAIL` and `ADMIN_PASSWORD` as PowerShell environment variables and run `npm start`; the app is at <http://localhost:8091>. The local database is saved under `data/sneaker-shop.db`.
+A direct start without Docker is also possible: set `ADMIN_EMAIL` and `ADMIN_PASSWORD` as private PowerShell environment variables and run `npm start`.
 
 ## Test
 
@@ -32,13 +32,25 @@ npm test
 
 ## Jenkins
 
-Create a Pipeline job pointing to `https://github.com/ThiruchenthillSP/Online-Sneakers-Shop.git` and use `Jenkinsfile` as the script path. `DEPLOY=false` runs syntax and automated tests. Set `DEPLOY=true` only when the Jenkins machine has Docker access and a local `.env` containing `ADMIN_PASSWORD`; the deployment exposes port 8091.
+The Pipeline job uses `https://github.com/ThiruchenthillSP/Online-Sneakers-Shop.git` and `Jenkinsfile` on `main`. CI build #1 passed all eight tests with `DEPLOY=false`. The Docker deployment below was verified locally, not through that Jenkins build. Use `DEPLOY=true` only when the Jenkins agent has Docker access and a private `.env` in its workspace.
 
-The source is published on the linked GitHub repository. Jenkins should use its `main` branch.
+## Docker and Ansible verification
+
+The built image is `online-sneakers-shop-shop:latest`, the running Compose container is `online-sneakers-shop-shop-1`, and the persistent SQLite volume is `online-sneakers-shop_shop-data`. Docker reports the container healthy; `GET /api/health` returns `status: ok` on port 8091.
+
+From Ubuntu/WSL:
+
+```bash
+cd /mnt/c/Users/thira/Flight_Management/Online-Sneakers-Shop
+ansible-playbook -i ansible/inventory ansible/playbook.yml
+ansible-playbook -i ansible/inventory ansible/playbook.yml
+```
+
+The first playbook run started a stopped container (`changed=1`); the second run made no changes (`changed=0`). To force a rebuild, add `-e force_build=true`.
 
 ## Feature scope and limitations
 
-- Checkout supports **cash on delivery only**. This is a project demonstration; no real payment service, shipping carrier or email integration is connected.
-- Product stock is shared across sizes in this version; sizes are recorded per order, but size-specific inventory is not modeled.
-- The administrator is created on first startup only when `ADMIN_EMAIL` and `ADMIN_PASSWORD` are set. Change the password in a production deployment using a separate account-management workflow.
-- Use TLS, a reverse proxy, rate limiting, backups and operational monitoring before a public deployment.
+- Checkout supports **cash on delivery only**. No real payment service, shipping carrier or email integration is connected.
+- Product stock is shared across sizes; sizes are recorded per order, but size-specific inventory is not modeled.
+- The administrator is created on first startup only when `ADMIN_EMAIL` and `ADMIN_PASSWORD` are set. Keep the private `.env` out of Git.
+- Add TLS, a reverse proxy, rate limiting, backups and monitoring before public deployment.
