@@ -34,7 +34,7 @@ npm test
 
 Create a Pipeline job pointing to `https://github.com/ThiruchenthillSP/Online-Sneakers-Shop.git` and use `Jenkinsfile` as the script path. `DEPLOY=false` runs syntax and automated tests. Set `DEPLOY=true` only when the Jenkins machine has Docker access and a local `.env` containing `ADMIN_PASSWORD`; the deployment exposes port 8091.
 
-The linked GitHub repository was empty when this local project was created. The source is local until you commit and push it with repository write access.
+The source is published on the linked GitHub repository. Jenkins should use its `main` branch.
 
 ## Feature scope and limitations
 
