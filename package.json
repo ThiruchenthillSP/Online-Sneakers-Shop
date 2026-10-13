@@ -1,0 +1,14 @@
+{
+  "name": "online-sneakers-shop",
+  "version": "1.0.0",
+  "private": true,
+  "description": "A full-stack sneaker storefront and order management application",
+  "type": "module",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node --watch server/index.js",
+    "test": "node --test tests/*.test.js",
+    "check": "node --check server/app.js && node --check server/db.js && node --check public/app.js"
+  },
+  "engines": { "node": ">=24" }
+}
