@@ -1,0 +1,10 @@
+.git
+.env
+data
+screenshots
+output
+report/tmp
+report/rendered
+report/docx-render
+node_modules
+coverage
